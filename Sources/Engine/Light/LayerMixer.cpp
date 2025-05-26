@@ -1015,6 +1015,10 @@ void CLayerMixer::AddOneLayerPoint( CBrushShadowLayer *pbsl, UBYTE *pubMask, UBY
       {
           AddShadowMaskOnly(pubMask, ubMask, pbsl->bsl_pbsmShadowMap->GetShadowLayersCount(LSF_CASTSHADOWS));
       }
+      else
+      {
+          AddConstantLayerIntensity(pbsl->bsl_pbsmShadowMap->GetShadowLayersCount(LSF_CASTSHADOWS));
+      }
   }
   // For classic (fixed pipeline) also calculate lighting in shadow-maps
   else
