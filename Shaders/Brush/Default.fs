@@ -18,9 +18,8 @@
 #define MTL_NORMAL          1
 #define MTL_HEIGHT          2
 
-// Height map constants
-// TODO: Maybe need uniform variable for it (can depend on texture & mapping)
-#define HM_SCALE          0.025f
+// Shadow layer opacity
+#define SHADOW_OPACITY      0.9f
 
 // Light source description
 struct Light
@@ -115,6 +114,37 @@ vec3 calculatePointLight(vec3 fragPos, vec3 fragNormal, Light light, bool calcDi
     return light.color.rgb * (diffuse + specular) * attenuation;
 }
 
+vec3 calculateSpotLight(vec3 fragPos, vec3 fragNormal, Light light, float specInstensity, float shininess)
+{
+    // Fragment-light vector
+    vec3 toLight = light.position.xyz - fragPos;
+
+    // Fragment-light normalized vector (direction)
+    vec3 lightDir = normalize(toLight);
+
+    // Light orientation vector
+    vec3 lightOrientation = normalize(light.direction.xyz);
+
+    // Calc angle attenuation
+    float angleAttenuation = 0.0f;
+
+    float angle = acos(dot(-lightDir, lightOrientation));
+    float angleMin = radians(light.cutOffMin);
+    float angleMax = radians(light.cutOffMax);
+
+    if(angle < angleMin)
+    {
+        angleAttenuation = 1.0f;
+    }
+    else if(angle > angleMin && angle < angleMax)
+    {
+        float m = (min(angle, angleMax) - angleMin) / (angleMax - angleMin);
+        angleAttenuation = mix(1.0f, 0.0f, m);
+    }
+
+    return calculatePointLight(fragPos, fragNormal, light, true, specInstensity, shininess) * angleAttenuation;
+}
+
 vec3 calculateDirectional(vec3 fragPos, vec3 fragNormal, Light light, float specInstensity, float shininess)
 {
     // Directional to light
@@ -161,7 +191,7 @@ vec2 parallaxOcclusionMapping(vec2 uv, vec3 viewDirTangent, int numStepsMin, int
     // Initialize ray marching
     float layerDepth = 1.0f / float(numSteps);                 // One layer depth (step size)
     float safeZ = max(abs(viewDirTangent.z), 0.0001);
-    vec2 deltaUV = viewDirTangent.xy * HM_SCALE / safeZ;             // Full UV displacement, scaled by height scale
+    vec2 deltaUV = viewDirTangent.xy * heightScale / safeZ;          // Full UV displacement, scaled by height scale
     vec2 currentUV = uv;                                             // Start from current UV
     float currentDepth = 1.0f;                                       // Start from max depth (z = height scale)
     float lastSampledHeight = height;                                // Last sampled height
@@ -256,6 +286,13 @@ void main()
             normal = normalize(fs_in.TBN * normalTangent);
         }
 
+        float shadowAttenuation = 1.0f;
+        if(bool(useShadow))
+        {
+            float shadow = texture2D(texShadow, fs_in.uv[activeLayers]).r;
+            shadowAttenuation = clamp(shadow + (1.0f - SHADOW_OPACITY), 0.0f, 1.0f);
+        }
+
         for (int i = 0; i < activeLights; i++)
         {
             switch(lights[i].type)
@@ -267,7 +304,7 @@ void main()
                         lights[i], 
                         true, 
                         specIntensity, 
-                        shininess);
+                        shininess) * shadowAttenuation;
                 break;
 
                 case LT_AMBIENT:
@@ -276,8 +313,8 @@ void main()
                         normal, 
                         lights[i], 
                         false, 
-                        specIntensity, 
-                        shininess);
+                        0.0f, 
+                        0.0f);
                 break;
 
                 case LT_DIRECTIONAL:
@@ -286,14 +323,18 @@ void main()
                         normal, 
                         lights[i], 
                         specIntensity, 
-                        shininess);
+                        shininess) * shadowAttenuation;
+                break;
+
+                case LT_SPOT:
+                    lighting += calculateSpotLight(
+                        fs_in.position, 
+                        normal, 
+                        lights[i], 
+                        specIntensity, 
+                        shininess) * shadowAttenuation;
                 break;
             }
-        }
-        
-        if(bool(useShadow))
-        {
-            lighting *= texture2D(texShadow, fs_in.uv[activeLayers]).r;
         }
     }
 

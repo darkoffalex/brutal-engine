@@ -243,6 +243,8 @@ public:
 
   // get number of shadow layers
   INDEX GetShadowLayersCount(void) { return bsm_lhLayers.Count(); };
+  // get number of shadow layers with specific light falgs
+  INDEX GetShadowLayersCount(ULONG lFlags);
   // get amount of memory used by this object
   SLONG GetUsedMemory(void);
 };
@@ -395,6 +397,7 @@ public:
   COLOR bpo_colColor;                         // color of this polygon
   ULONG bpo_ulFlags;                          // flags
   COLOR bpo_colShadow;                        // color of shadow on this polygon
+  FLOAT bpo_fHeightScale;                     // height map scale (shader pipelien only)
   CBrushShadowMap bpo_smShadowMap;            // shadow map of this polygon
   CMappingDefinition bpo_mdShadow;            // mapping of shadow on polygon
   CBrushPolygonProperties bpo_bppProperties;  // additional properties
@@ -408,7 +411,7 @@ public:
   INDEX bpo_iInWorld;   // index of the polygon in entire world
 
   /* Default constructor. */
-  inline CBrushPolygon(void) : bpo_ulFlags(0) {};
+  inline CBrushPolygon(void) : bpo_ulFlags(0), bpo_fHeightScale(0) {};
   /* Clear the object. */
   void Clear(void);
   /* Destructor. */

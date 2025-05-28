@@ -517,6 +517,9 @@ void CRenderer::RenderOneModel( CEntity &en, CModelObject &moModel, const CPlace
           if (plsLight->ls_ulFlags & LSF_DIRECTIONAL) {
               eType = WorldShaderLightType::WSLT_DIRECTIONAL;
           }
+          else if (plsLight->ls_ulFlags & LSF_SPOTLIGHT){
+              eType = WorldShaderLightType::WSLT_SPOT;
+          }
           else if (plsLight->ls_ulFlags & LSF_CASTSHADOWS) {
               eType = WorldShaderLightType::WSLT_POINT;
           }
@@ -532,6 +535,8 @@ void CRenderer::RenderOneModel( CEntity &en, CModelObject &moModel, const CPlace
           sLightData.wsl_vColorAmbient = FLOAT3D((FLOAT)ubAmbient[0] / 255.0f, (FLOAT)ubAmbient[1] / 255.0f, (FLOAT)ubAmbient[2] / 255.0f);
           sLightData.wsl_fFallOff = plsLight->ls_rFallOff;
           sLightData.wsl_fHotSpot = plsLight->ls_rHotSpot;
+          sLightData.wsl_fCutOffMin = plsLight->ls_fSpotCutOffInner;
+          sLightData.wsl_fCutOffMax = plsLight->ls_fSpotCutOffOuter;
           sLightData.wsl_uType = (UINT)eType;
 
           // Update UBO
@@ -553,6 +558,9 @@ void CRenderer::RenderOneModel( CEntity &en, CModelObject &moModel, const CPlace
       COLOR colEmission;
       FLOAT fEmissionPower;
       en.GetEmissionParameters(colEmission, fEmissionPower);
+
+      // Flat shading option
+      gfxUniform1i(uniformIds.wsu_iFlatShading, (INDEX)(en.GetFlags() & ENF_FLAT_SHADING));
 
       UBYTE ubColEmission[3] = { 0, 0, 0 };
       ColorToRGB(colEmission, ubColEmission[0], ubColEmission[1], ubColEmission[2]);
@@ -873,7 +881,7 @@ void CRenderer::RenderModels( BOOL bBackground)
       auto* pWorld = dm.dm_penModel->GetWorld();
 
       // don't use sahder for specific entities
-      BOOL bShaderIgnored = en.GetCollisionFlags() & ECF_ITEM;
+      BOOL bShaderIgnored = en.IsItem() || en.IsMarker();
 
       // use shader program if loaded
       if (pWorld->wo_sModelShaderInfo.gsi_bLoaded && !bShaderIgnored)
