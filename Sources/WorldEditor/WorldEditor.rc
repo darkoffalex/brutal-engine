@@ -437,7 +437,7 @@ BEGIN
         MENUITEM "Save t&humbnail",             ID_SAVE_THUMBNAIL
         MENUITEM "Take screen shoot\tAlt+C",    ID_TAKE_SS
         MENUITEM SEPARATOR
-        MENUITEM "Create &texture\tCtrl+T",     ID_CREATE_TEXTURE
+        MENUITEM "Create &texture\tCtrl+Shift+T", ID_CREATE_TEXTURE
         MENUITEM "Preferences\tCtrl+P",         ID_FILE_PREFERENCES
         MENUITEM SEPARATOR
         MENUITEM "Recent File",                 ID_FILE_MRU_FILE1, GRAYED
